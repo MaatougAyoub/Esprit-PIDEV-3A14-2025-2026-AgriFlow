@@ -7,6 +7,9 @@ This project was developed as part of the PIDEV – 3rd Year Engineering Program
 AgriFlow is a JavaFX desktop application designed to digitize and optimize agricultural management in Tunisia. It provides smart, accessible digital tools for farmers, experts, and administrators to manage parcels, crops, marketplaces, diagnostics, irrigation plans, and more.
 
 ---
+## 🌍 Live Demo
+Project website available at:
+https://maatougayoub.github.io/Esprit-PIDEV-3A14-2025-2026-AgriFlow/
 
 ## Features
 
