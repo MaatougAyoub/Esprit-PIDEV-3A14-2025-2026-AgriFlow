@@ -20,6 +20,7 @@ import java.util.List;
 // Service CRUD mta3 les Reservations - meme principe ki AnnonceService
 // kol reservation t link annonce + demandeur + proprietaire
 public class ServiceReservation implements IService<Reservation> {
+    private static final String OWNER_REPLY_MARKER = "\n\n--- REPONSE_PROPRIETAIRE ---\n";
 
     // commission 10% 3la kol reservation (business logic)
     private static final double COMMISSION_TAUX = 0.10;
@@ -101,7 +102,7 @@ public class ServiceReservation implements IService<Reservation> {
                 : StatutReservation.EN_ATTENTE;
 
         String query = "INSERT INTO reservations (annonce_id, demandeur_id, proprietaire_id, date_debut, date_fin, " +
-                "quantite, prix_total, caution, statut, message_demande) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                "quantite, prix_total, statut, date_creation, commission, message) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
         try (PreparedStatement pst = cnx.prepareStatement(query, Statement.RETURN_GENERATED_KEYS)) {
             pst.setInt(1, reservation.getAnnonce().getId());
@@ -111,9 +112,11 @@ public class ServiceReservation implements IService<Reservation> {
             pst.setDate(5, Date.valueOf(reservation.getDateFin()));
             pst.setInt(6, reservation.getQuantite());
             pst.setDouble(7, reservation.getPrixTotal());
-            pst.setDouble(8, reservation.getCaution());
-            pst.setString(9, statut.name());
-            pst.setString(10, reservation.getMessageDemande());
+            pst.setString(8, statut.name());
+            pst.setTimestamp(9, Timestamp.valueOf(
+                    reservation.getDateDemande() != null ? reservation.getDateDemande() : java.time.LocalDateTime.now()));
+            pst.setDouble(10, commission);
+            pst.setString(11, buildMessageColumn(reservation));
 
             pst.executeUpdate();
 
@@ -130,10 +133,16 @@ public class ServiceReservation implements IService<Reservation> {
     public void modifier(Reservation reservation) throws SQLException {
         autoSetProprietaire(reservation);
         validateReservationForUpdate(reservation);
+        double basePrix = reservation.getPrixTotal();
+        if (basePrix <= 0) {
+            reservation.calculerPrixTotal();
+            basePrix = reservation.getPrixTotal();
+        }
+        double commission = calculerCommission(basePrix);
+        reservation.setPrixTotal(basePrix + commission);
+
         String query = "UPDATE reservations SET annonce_id=?, demandeur_id=?, proprietaire_id=?, date_debut=?, date_fin=?, "
-                +
-                "quantite=?, prix_total=?, caution=?, statut=?, message_demande=?, reponse_proprietaire=?, " +
-                "date_reponse=?, contrat_url=?, contrat_signe=?, date_signature_contrat=? WHERE id=?";
+                + "quantite=?, prix_total=?, statut=?, commission=?, message=? WHERE id=?";
 
         try (PreparedStatement pst = cnx.prepareStatement(query)) {
             pst.setInt(1, reservation.getAnnonce().getId());
@@ -143,20 +152,11 @@ public class ServiceReservation implements IService<Reservation> {
             pst.setDate(5, reservation.getDateFin() != null ? Date.valueOf(reservation.getDateFin()) : null);
             pst.setInt(6, reservation.getQuantite());
             pst.setDouble(7, reservation.getPrixTotal());
-            pst.setDouble(8, reservation.getCaution());
-            pst.setString(9, reservation.getStatut() != null ? reservation.getStatut().name()
+            pst.setString(8, reservation.getStatut() != null ? reservation.getStatut().name()
                     : StatutReservation.EN_ATTENTE.name());
-            pst.setString(10, reservation.getMessageDemande());
-            pst.setString(11, reservation.getReponseProprietaire());
-            pst.setTimestamp(12,
-                    reservation.getDateReponse() != null ? Timestamp.valueOf(reservation.getDateReponse()) : null);
-            pst.setString(13, reservation.getContratUrl());
-            pst.setBoolean(14, reservation.isContratSigne());
-            pst.setTimestamp(15,
-                    reservation.getDateSignatureContrat() != null
-                            ? Timestamp.valueOf(reservation.getDateSignatureContrat())
-                            : null);
-            pst.setInt(16, reservation.getId());
+            pst.setDouble(9, commission);
+            pst.setString(10, buildMessageColumn(reservation));
+            pst.setInt(11, reservation.getId());
 
             pst.executeUpdate();
         }
@@ -242,6 +242,39 @@ public class ServiceReservation implements IService<Reservation> {
         return prixTotal * COMMISSION_TAUX;
     }
 
+    private String buildMessageColumn(Reservation reservation) {
+        String demande = reservation.getMessageDemande() != null ? reservation.getMessageDemande().trim() : "";
+        String reponse = reservation.getReponseProprietaire() != null ? reservation.getReponseProprietaire().trim() : "";
+
+        if (demande.isEmpty()) {
+            return reponse.isEmpty() ? null : OWNER_REPLY_MARKER.trim() + "\n" + reponse;
+        }
+        if (reponse.isEmpty()) {
+            return demande;
+        }
+        return demande + OWNER_REPLY_MARKER + reponse;
+    }
+
+    private void hydrateMessagesFromColumn(Reservation reservation, String rawMessage) {
+        if (rawMessage == null || rawMessage.isBlank()) {
+            reservation.setMessageDemande(null);
+            reservation.setReponseProprietaire(null);
+            return;
+        }
+
+        int markerIndex = rawMessage.indexOf(OWNER_REPLY_MARKER);
+        if (markerIndex < 0) {
+            reservation.setMessageDemande(rawMessage);
+            reservation.setReponseProprietaire(null);
+            return;
+        }
+
+        String demande = rawMessage.substring(0, markerIndex).trim();
+        String reponse = rawMessage.substring(markerIndex + OWNER_REPLY_MARKER.length()).trim();
+        reservation.setMessageDemande(demande.isEmpty() ? null : demande);
+        reservation.setReponseProprietaire(reponse.isEmpty() ? null : reponse);
+    }
+
     /**
      * Auto-dérive le propriétaire depuis l'annonce si non défini.
      * Évite le crash "proprietaire obligatoire" quand l'appelant
@@ -288,7 +321,7 @@ public class ServiceReservation implements IService<Reservation> {
             throw new SQLException("La date debut doit etre avant la date fin.");
         }
         if (reservation.getCaution() < 0) {
-            throw new SQLException("Caution invalide.");
+            reservation.setCaution(0);
         }
     }
 
@@ -298,14 +331,13 @@ public class ServiceReservation implements IService<Reservation> {
         reservation.setId(rs.getInt("id"));
         reservation.setQuantite(rs.getInt("quantite"));
         reservation.setPrixTotal(rs.getDouble("prix_total"));
-        reservation.setCaution(rs.getDouble("caution"));
+        reservation.setCaution(0);
         reservation.setStatut(StatutReservation.valueOf(rs.getString("statut")));
-        reservation.setMessageDemande(rs.getString("message_demande"));
-        reservation.setReponseProprietaire(rs.getString("reponse_proprietaire"));
-        reservation.setContratUrl(rs.getString("contrat_url"));
-        reservation.setContratSigne(rs.getBoolean("contrat_signe"));
-        reservation.setPaiementEffectue(rs.getBoolean("paiement_effectue"));
-        reservation.setModePaiement(rs.getString("mode_paiement"));
+        hydrateMessagesFromColumn(reservation, rs.getString("message"));
+        reservation.setContratUrl(null);
+        reservation.setContratSigne(false);
+        reservation.setPaiementEffectue(false);
+        reservation.setModePaiement(null);
 
         Date dateDebut = rs.getDate("date_debut");
         if (dateDebut != null) {
@@ -317,24 +349,15 @@ public class ServiceReservation implements IService<Reservation> {
             reservation.setDateFin(dateFin.toLocalDate());
         }
 
-        Timestamp dateDemande = rs.getTimestamp("date_demande");
+        Timestamp dateDemande = rs.getTimestamp("date_creation");
         if (dateDemande != null) {
             reservation.setDateDemande(dateDemande.toLocalDateTime());
         }
-
-        Timestamp dateReponse = rs.getTimestamp("date_reponse");
-        if (dateReponse != null) {
-            reservation.setDateReponse(dateReponse.toLocalDateTime());
-        }
-
-        Timestamp dateSignature = rs.getTimestamp("date_signature_contrat");
-        if (dateSignature != null) {
-            reservation.setDateSignatureContrat(dateSignature.toLocalDateTime());
-        }
-
-        Timestamp datePaiement = rs.getTimestamp("date_paiement");
-        if (datePaiement != null) {
-            reservation.setDatePaiement(datePaiement.toLocalDateTime());
+        reservation.setDateReponse(null);
+        reservation.setDateSignatureContrat(null);
+        reservation.setDatePaiement(null);
+        if (reservation.getStatut() == StatutReservation.EN_COURS || reservation.getStatut() == StatutReservation.TERMINEE) {
+            reservation.setPaiementEffectue(true);
         }
 
         int annonceId = rs.getInt("annonce_id");
@@ -418,12 +441,14 @@ public class ServiceReservation implements IService<Reservation> {
             throw new SQLException("Impossible d'accepter : un contrat existe déjà pour ces dates sur cet équipement.");
         }
 
-        String query = "UPDATE reservations SET statut=?, reponse_proprietaire=?, date_reponse=? WHERE id=?";
+        reservation.setStatut(StatutReservation.ACCEPTEE);
+        reservation.setReponseProprietaire(reponse);
+
+        String query = "UPDATE reservations SET statut=?, message=? WHERE id=?";
         try (PreparedStatement pst = cnx.prepareStatement(query)) {
             pst.setString(1, StatutReservation.ACCEPTEE.name());
-            pst.setString(2, reponse);
-            pst.setTimestamp(3, Timestamp.valueOf(java.time.LocalDateTime.now()));
-            pst.setInt(4, reservationId);
+            pst.setString(2, buildMessageColumn(reservation));
+            pst.setInt(3, reservationId);
             pst.executeUpdate();
         }
 
@@ -435,12 +460,18 @@ public class ServiceReservation implements IService<Reservation> {
 
     // ===== Refuser une réservation =====
     public void refuserReservation(int reservationId, String reponse) throws SQLException {
-        String query = "UPDATE reservations SET statut=?, reponse_proprietaire=?, date_reponse=? WHERE id=?";
+        Reservation reservation = recupererParId(reservationId);
+        if (reservation == null) {
+            throw new SQLException("RÃ©servation introuvable.");
+        }
+        reservation.setStatut(StatutReservation.REFUSEE);
+        reservation.setReponseProprietaire(reponse);
+
+        String query = "UPDATE reservations SET statut=?, message=? WHERE id=?";
         try (PreparedStatement pst = cnx.prepareStatement(query)) {
             pst.setString(1, StatutReservation.REFUSEE.name());
-            pst.setString(2, reponse);
-            pst.setTimestamp(3, Timestamp.valueOf(java.time.LocalDateTime.now()));
-            pst.setInt(4, reservationId);
+            pst.setString(2, buildMessageColumn(reservation));
+            pst.setInt(3, reservationId);
             pst.executeUpdate();
         }
     }
@@ -448,10 +479,22 @@ public class ServiceReservation implements IService<Reservation> {
     // ===== Marquer paiement effectué =====
     // nbadlou el statut paiement fl base ba3d ma el user ykhallas b Stripe
     public void marquerPaiement(int reservationId, String modePaiement) throws SQLException {
-        String query = "UPDATE reservations SET paiement_effectue=1, date_paiement=?, mode_paiement=? WHERE id=?";
+        Reservation reservation = recupererParId(reservationId);
+        if (reservation == null) {
+            throw new SQLException("RÃ©servation introuvable.");
+        }
+
+        String paymentMessage = "Paiement effectuÃ©";
+        if (modePaiement != null && !modePaiement.isBlank()) {
+            paymentMessage += " via " + modePaiement;
+        }
+        reservation.setStatut(StatutReservation.EN_COURS);
+        reservation.setReponseProprietaire(paymentMessage);
+
+        String query = "UPDATE reservations SET statut=?, message=? WHERE id=?";
         try (PreparedStatement pst = cnx.prepareStatement(query)) {
-            pst.setTimestamp(1, Timestamp.valueOf(java.time.LocalDateTime.now()));
-            pst.setString(2, modePaiement);
+            pst.setString(1, StatutReservation.EN_COURS.name());
+            pst.setString(2, buildMessageColumn(reservation));
             pst.setInt(3, reservationId);
             pst.executeUpdate();
         }

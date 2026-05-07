@@ -41,10 +41,9 @@ public class    AnnonceService implements IService<Annonce> {
 
         // el query INSERT bel ? (PreparedStatement ya7mi men SQL Injection)
         String query = "INSERT INTO annonces (titre, description, type, statut, prix, unite_prix, " +
-                "categorie, marque, modele, annee_fabrication, localisation, proprietaire_id, " +
-                "date_debut_disponibilite, date_fin_disponibilite, avec_operateur, caution, " +
-                "quantite_disponible, unite_quantite) " +
-                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                "categorie, localisation, latitude, longitude, proprietaire_id, date_creation, " +
+                "date_modification, quantite_disponible, image_url, localisation_normalisee) " +
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
         // RETURN_GENERATED_KEYS bech ba3d l INSERT, nraj3ou l ID elli tkhla9 (auto_increment)
         try (PreparedStatement pst = cnx.prepareStatement(query, Statement.RETURN_GENERATED_KEYS)) {
@@ -55,21 +54,19 @@ public class    AnnonceService implements IService<Annonce> {
             pst.setDouble(5, annonce.getPrix());
             pst.setString(6, unitePrix);
             pst.setString(7, annonce.getCategorie());
-            pst.setString(8, annonce.getMarque());
-            pst.setString(9, annonce.getModele());
-            pst.setInt(10, annonce.getAnneeFabrication());
-            pst.setString(11, annonce.getLocalisation());
-            pst.setInt(12, annonce.getProprietaire().getId());
-            pst.setDate(13,
-                    annonce.getDateDebutDisponibilite() != null ? Date.valueOf(annonce.getDateDebutDisponibilite())
-                            : null);
-            pst.setDate(14,
-                    annonce.getDateFinDisponibilite() != null ? Date.valueOf(annonce.getDateFinDisponibilite()) : null);
-            pst.setBoolean(15, annonce.isAvecOperateur());
-            pst.setDouble(16, annonce.getCaution());
-            pst.setInt(17, annonce.getQuantiteDisponible());
-            String uniteQte = annonce.getUniteQuantite();
-            pst.setString(18, (uniteQte != null && !uniteQte.isBlank()) ? uniteQte : "kg");
+            pst.setString(8, annonce.getLocalisation());
+            if (annonce.getLatitude() != 0) pst.setDouble(9, annonce.getLatitude());
+            else pst.setNull(9, Types.DOUBLE);
+            if (annonce.getLongitude() != 0) pst.setDouble(10, annonce.getLongitude());
+            else pst.setNull(10, Types.DOUBLE);
+            pst.setInt(11, annonce.getProprietaire().getId());
+            pst.setTimestamp(12, Timestamp.valueOf(
+                    annonce.getDateCreation() != null ? annonce.getDateCreation() : java.time.LocalDateTime.now()));
+            pst.setTimestamp(13, Timestamp.valueOf(
+                    annonce.getDateModification() != null ? annonce.getDateModification() : java.time.LocalDateTime.now()));
+            pst.setInt(14, annonce.getQuantiteDisponible());
+            pst.setString(15, annonce.getImage());
+            pst.setString(16, annonce.getLocalisation());
 
             int affectedRows = pst.executeUpdate();
 
@@ -101,9 +98,8 @@ public class    AnnonceService implements IService<Annonce> {
         }
 
         String query = "UPDATE annonces SET titre=?, description=?, type=?, statut=?, prix=?, unite_prix=?, " +
-                "categorie=?, marque=?, modele=?, annee_fabrication=?, localisation=?, " +
-                "date_debut_disponibilite=?, date_fin_disponibilite=?, avec_operateur=?, caution=?, " +
-                "quantite_disponible=?, unite_quantite=? " +
+                "categorie=?, localisation=?, latitude=?, longitude=?, date_modification=?, " +
+                "quantite_disponible=?, image_url=?, localisation_normalisee=? " +
                 "WHERE id=?";
 
         try (PreparedStatement pst = cnx.prepareStatement(query)) {
@@ -114,21 +110,16 @@ public class    AnnonceService implements IService<Annonce> {
             pst.setDouble(5, annonce.getPrix());
             pst.setString(6, unitePrix);
             pst.setString(7, annonce.getCategorie());
-            pst.setString(8, annonce.getMarque());
-            pst.setString(9, annonce.getModele());
-            pst.setInt(10, annonce.getAnneeFabrication());
-            pst.setString(11, annonce.getLocalisation());
-            pst.setDate(12,
-                    annonce.getDateDebutDisponibilite() != null ? Date.valueOf(annonce.getDateDebutDisponibilite())
-                            : null);
-            pst.setDate(13,
-                    annonce.getDateFinDisponibilite() != null ? Date.valueOf(annonce.getDateFinDisponibilite()) : null);
-            pst.setBoolean(14, annonce.isAvecOperateur());
-            pst.setDouble(15, annonce.getCaution());
-            pst.setInt(16, annonce.getQuantiteDisponible());
-            String uniteQte = annonce.getUniteQuantite();
-            pst.setString(17, (uniteQte != null && !uniteQte.isBlank()) ? uniteQte : "kg");
-            pst.setInt(18, annonce.getId());
+            pst.setString(8, annonce.getLocalisation());
+            if (annonce.getLatitude() != 0) pst.setDouble(9, annonce.getLatitude());
+            else pst.setNull(9, Types.DOUBLE);
+            if (annonce.getLongitude() != 0) pst.setDouble(10, annonce.getLongitude());
+            else pst.setNull(10, Types.DOUBLE);
+            pst.setTimestamp(11, Timestamp.valueOf(java.time.LocalDateTime.now()));
+            pst.setInt(12, annonce.getQuantiteDisponible());
+            pst.setString(13, annonce.getImage());
+            pst.setString(14, annonce.getLocalisation());
+            pst.setInt(15, annonce.getId());
 
             int affectedRows = pst.executeUpdate();
 
@@ -324,28 +315,18 @@ public class    AnnonceService implements IService<Annonce> {
         annonce.setPrix(rs.getDouble("prix"));
         annonce.setUnitePrix(rs.getString("unite_prix"));
         annonce.setCategorie(rs.getString("categorie"));
-        annonce.setMarque(rs.getString("marque"));
-        annonce.setModele(rs.getString("modele"));
-        annonce.setAnneeFabrication(rs.getInt("annee_fabrication"));
         annonce.setLocalisation(rs.getString("localisation"));
         annonce.setLatitude(rs.getDouble("latitude"));
         annonce.setLongitude(rs.getDouble("longitude"));
-        annonce.setAvecOperateur(rs.getBoolean("avec_operateur"));
-        annonce.setAssuranceIncluse(rs.getBoolean("assurance_incluse"));
-        annonce.setCaution(rs.getDouble("caution"));
-        annonce.setConditionsLocation(rs.getString("conditions_location"));
         annonce.setQuantiteDisponible(rs.getInt("quantite_disponible"));
-        annonce.setUniteQuantite(rs.getString("unite_quantite"));
-
-        Date dateDebut = rs.getDate("date_debut_disponibilite");
-        if (dateDebut != null) {
-            annonce.setDateDebutDisponibilite(dateDebut.toLocalDate());
-        }
-
-        Date dateFin = rs.getDate("date_fin_disponibilite");
-        if (dateFin != null) {
-            annonce.setDateFinDisponibilite(dateFin.toLocalDate());
-        }
+        annonce.setUniteQuantite(rs.getString("unite_prix"));
+        annonce.setMarque(null);
+        annonce.setModele(null);
+        annonce.setAnneeFabrication(0);
+        annonce.setAvecOperateur(false);
+        annonce.setAssuranceIncluse(false);
+        annonce.setCaution(0);
+        annonce.setConditionsLocation(null);
 
         Timestamp dateCreation = rs.getTimestamp("date_creation");
         if (dateCreation != null) {
@@ -379,6 +360,12 @@ public class    AnnonceService implements IService<Annonce> {
                             photos.add(url);
                         }
                     }
+                }
+            }
+            if (photos.isEmpty()) {
+                String imageUrl = rs.getString("image_url");
+                if (imageUrl != null && !imageUrl.trim().isEmpty()) {
+                    photos.add(imageUrl);
                 }
             }
             if (!photos.isEmpty()) {
