@@ -19,7 +19,7 @@ public class ServicePlanIrrigation implements IService<PlanIrrigation> {
 
     @Override
     public void ajouter(PlanIrrigation plan) throws SQLException {
-        String sql = "INSERT INTO plans_irrigation (id_culture, nom_culture, date_demande, statut, "
+        String sql = "INSERT INTO plans_irrigation (culture_id, nom_culture, date_demande, statut, "
                 + "volume_eau_propose, temp_irrigation, temp, donnees_meteo_json) "
                 + "VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
 
@@ -93,7 +93,7 @@ public class ServicePlanIrrigation implements IService<PlanIrrigation> {
     @Override
     public List<PlanIrrigation> recuperer() throws SQLException {
         List<PlanIrrigation> plans = new ArrayList<>();
-        String sql = "SELECT plan_id, id_culture, nom_culture, date_demande, statut, "
+        String sql = "SELECT plan_id, culture_id, nom_culture, date_demande, statut, "
                 + "volume_eau_propose, temp_irrigation, temp, donnees_meteo_json "
                 + "FROM plans_irrigation";
 
@@ -114,10 +114,10 @@ public class ServicePlanIrrigation implements IService<PlanIrrigation> {
     public List<PlanIrrigation> recupererParUtilisateur(int userId) throws SQLException {
         List<PlanIrrigation> plans = new ArrayList<>();
 
-        String sql = "SELECT p.plan_id, p.id_culture, p.nom_culture, p.date_demande, p.statut, "
+        String sql = "SELECT p.plan_id, p.culture_id, p.nom_culture, p.date_demande, p.statut, "
                 + "p.volume_eau_propose, p.temp_irrigation, p.temp, p.donnees_meteo_json "
                 + "FROM plans_irrigation p "
-                + "INNER JOIN cultures c ON p.id_culture = c.id "
+                + "INNER JOIN cultures c ON p.culture_id = c.id "
                 + "INNER JOIN parcelle pa ON c.parcelle_id = pa.id "
                 + "WHERE pa.agriculteur_id = ? "
                 + "ORDER BY p.date_demande DESC";
@@ -141,7 +141,7 @@ public class ServicePlanIrrigation implements IService<PlanIrrigation> {
     }
 
     public int getLastPlanIdByCulture(int idCulture) throws SQLException {
-        String sql = "SELECT plan_id FROM plans_irrigation WHERE id_culture = ? ORDER BY plan_id DESC LIMIT 1";
+        String sql = "SELECT plan_id FROM plans_irrigation WHERE culture_id = ? ORDER BY plan_id DESC LIMIT 1";
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
             ps.setInt(1, idCulture);
             try (ResultSet rs = ps.executeQuery()) {
@@ -152,7 +152,7 @@ public class ServicePlanIrrigation implements IService<PlanIrrigation> {
     }
 
     public int createDraftPlanAndReturnId(int idCulture, float volumeEauPropose) throws SQLException {
-        String sql = "INSERT INTO plans_irrigation (id_culture, date_demande, statut, volume_eau_propose, "
+        String sql = "INSERT INTO plans_irrigation (culture_id, date_demande, statut, volume_eau_propose, "
                 + "temp_irrigation, temp, donnees_meteo_json) "
                 + "VALUES (?, NOW(), ?, ?, '00:00:00', NOW(), NULL)";
 
@@ -171,7 +171,7 @@ public class ServicePlanIrrigation implements IService<PlanIrrigation> {
 
     private PlanIrrigation mapResultSetToPlan(ResultSet rs) throws SQLException {
         int id = rs.getInt("plan_id");
-        int idCulture = rs.getInt("id_culture");
+        int idCulture = rs.getInt("culture_id");
         String nomCulture = rs.getString("nom_culture");
 
         Timestamp ddTs = rs.getTimestamp("date_demande");

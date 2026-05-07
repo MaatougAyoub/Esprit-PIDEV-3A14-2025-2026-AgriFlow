@@ -9,11 +9,11 @@
         <module name="my-project" />
         <module name="agriflow-integration yakine - Copie" />
         <module name="maven-surefire-plugin" />
+        <module name="AgriFlow" />
         <module name="AgriFlow-PI" />
       </profile>
     </annotationProcessing>
     <bytecodeTargetLevel>
-      <module name="AgriFlow" target="17" />
       <module name="module5-collaborations" target="17" />
     </bytecodeTargetLevel>
   </component>

@@ -19,7 +19,7 @@ public class ExpertService {
 
     public List<Diagnostic> getAllDiagnostics() {
         List<Diagnostic> diagnosti = new ArrayList<>();
-        String sql = "SELECT id_diagnostic, id_agriculteur, nom_culture, image_path, " +
+        String sql = "SELECT id_diagnostic, agriculteur_id, nom_culture, image_path, " +
                 "description, reponse_expert, date_envoi, statut FROM diagnosti";
 
         try (Statement st = connection.createStatement();
@@ -28,7 +28,7 @@ public class ExpertService {
             while (rs.next()) {
                 Diagnostic diag = new Diagnostic();
                 diag.setIdDiagnostic(rs.getInt("id_diagnostic"));
-                diag.setIdAgriculteur(rs.getInt("id_agriculteur"));
+                diag.setIdAgriculteur(rs.getInt("agriculteur_id"));
                 diag.setNomCulture(rs.getString("nom_culture"));
                 diag.setImagePath(rs.getString("image_path"));
                 diag.setDescription(rs.getString("description"));

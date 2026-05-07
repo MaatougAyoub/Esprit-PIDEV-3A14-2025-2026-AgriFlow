@@ -21,7 +21,7 @@ public class ServiceCulture implements IService<Culture> {
         String req = "INSERT INTO cultures(" +
                 "parcelle_id, proprietaire_id, nom, type_culture, superficie, etat, " +
                 "date_recolte, recolte_estime, " +
-                "id_acheteur, date_vente, date_publication, prix_vente" +
+                "acheteur_id, date_vente, date_publication, prix_vente" +
                 ") VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
         try (PreparedStatement ps = connection.prepareStatement(req)) {
@@ -64,7 +64,7 @@ public class ServiceCulture implements IService<Culture> {
         String req = "UPDATE cultures SET " +
                 "parcelle_id=?, proprietaire_id=?, nom=?, type_culture=?, superficie=?, etat=?, " +
                 "date_recolte=?, recolte_estime=?, " +
-                "id_acheteur=?, date_vente=?, date_publication=?, prix_vente=? " +
+                "acheteur_id=?, date_vente=?, date_publication=?, prix_vente=? " +
                 "WHERE id=?";
 
         try (PreparedStatement ps = connection.prepareStatement(req)) {
@@ -126,7 +126,7 @@ public class ServiceCulture implements IService<Culture> {
                 double re = rs.getDouble("recolte_estime");
                 Double recolteEstime = rs.wasNull() ? null : re;
 
-                int ia = rs.getInt("id_acheteur");
+                int ia = rs.getInt("acheteur_id");
                 Integer idAcheteur = rs.wasNull() ? null : ia;
 
                 Date dateVente = rs.getDate("date_vente");
@@ -167,7 +167,7 @@ public class ServiceCulture implements IService<Culture> {
      * Publie une culture en vente (etat=EN_VENTE)
      */
     public void publierEnVente(int cultureId, double prixVente, Date datePublication) throws SQLException {
-        String req = "UPDATE cultures SET etat=?, prix_vente=?, date_publication=?, id_acheteur=NULL, date_vente=NULL " +
+        String req = "UPDATE cultures SET etat=?, prix_vente=?, date_publication=?, acheteur_id=NULL, date_vente=NULL " +
                 "WHERE id=?";
 
         try (PreparedStatement ps = connection.prepareStatement(req)) {
@@ -186,7 +186,7 @@ public class ServiceCulture implements IService<Culture> {
      * Marque une culture vendue (etat=VENDUE)
      */
     public void marquerVendue(int cultureId, int idAcheteur, Date dateVente) throws SQLException {
-        String req = "UPDATE cultures SET etat=?, id_acheteur=?, date_vente=? WHERE id=?";
+        String req = "UPDATE cultures SET etat=?, acheteur_id=?, date_vente=? WHERE id=?";
 
         try (PreparedStatement ps = connection.prepareStatement(req)) {
             ps.setString(1, Culture.Etat.VENDUE.name());
@@ -204,7 +204,7 @@ public class ServiceCulture implements IService<Culture> {
      * Retire une culture de la vente (reset champs vente). etatApresRetrait = EN_COURS ou RECOLTEE selon ton choix
      */
     public void retirerDeVente(int cultureId, Culture.Etat etatApresRetrait) throws SQLException {
-        String req = "UPDATE cultures SET etat=?, prix_vente=NULL, date_publication=NULL, id_acheteur=NULL, date_vente=NULL " +
+        String req = "UPDATE cultures SET etat=?, prix_vente=NULL, date_publication=NULL, acheteur_id=NULL, date_vente=NULL " +
                 "WHERE id=?";
 
         try (PreparedStatement ps = connection.prepareStatement(req)) {
@@ -232,7 +232,7 @@ public class ServiceCulture implements IService<Culture> {
                     double re = rs.getDouble("recolte_estime");
                     Double recolteEstime = rs.wasNull() ? null : re;
 
-                    int ia = rs.getInt("id_acheteur");
+                    int ia = rs.getInt("acheteur_id");
                     Integer idAcheteur = rs.wasNull() ? null : ia;
 
                     Date dateVente = rs.getDate("date_vente");
@@ -314,7 +314,7 @@ public class ServiceCulture implements IService<Culture> {
                 double re = rs.getDouble("recolte_estime");
                 Double recolteEstime = rs.wasNull() ? null : re;
 
-                int ia = rs.getInt("id_acheteur");
+                int ia = rs.getInt("acheteur_id");
                 Integer idAcheteur = rs.wasNull() ? null : ia;
 
                 Date dateVente = rs.getDate("date_vente");
@@ -345,8 +345,8 @@ public class ServiceCulture implements IService<Culture> {
 
     public boolean acheterAtomic(int cultureId, int acheteurId, Date dateVente) throws SQLException {
         String sql =
-                "UPDATE cultures " +
-                        "SET etat=?, id_acheteur=?, date_vente=? " +
+                        "UPDATE cultures " +
+                        "SET etat=?, acheteur_id=?, date_vente=? " +
                         "WHERE id=? AND etat=?";
 
         try (PreparedStatement ps = connection.prepareStatement(sql)) {

@@ -6,7 +6,7 @@ import java.sql.Timestamp;
 public class Culture {
 
     public enum TypeCulture {
-        BLE, ORGE, MAIS, POMME_DE_TERRE, TOMATE, OLIVIER, AGRUMES, VIGNE, FRAISE, LEGUMES, AUTRE
+        BLE, ORGE, MAIS, POMME_DE_TERRE, TOMATE, OLIVIER, AGRUMES, VIGNE, PASTECQUE, FRAISE, LEGUMES, AUTRE
     }
 
     public enum Etat {
@@ -129,7 +129,7 @@ public class Culture {
         float f = switch (typeCulture) {
             case BLE, ORGE, FRAISE, AUTRE -> 2.0f;
             case MAIS, TOMATE -> 4.0f;
-            case POMME_DE_TERRE, AGRUMES, LEGUMES -> 3.0f;
+            case POMME_DE_TERRE, AGRUMES, PASTECQUE, LEGUMES -> 3.0f;
             case OLIVIER, VIGNE -> 1.0f;
         };
 
@@ -193,6 +193,7 @@ public class Culture {
             case OLIVIER -> 1;
             case AGRUMES -> 3;
             case VIGNE -> 1;
+            case PASTECQUE -> 3;
             case FRAISE -> 2;
             case LEGUMES -> 3;
             case AUTRE -> 2;

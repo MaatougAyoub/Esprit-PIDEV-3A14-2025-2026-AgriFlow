@@ -16,7 +16,7 @@ public class DiagnosticService {
     }
 
     public void ajouterDiagnostic(Diagnostic d) {
-        String sql = "INSERT INTO diagnosti (id_agriculteur, nom_culture, image_path, " +
+        String sql = "INSERT INTO diagnosti (agriculteur_id, nom_culture, image_path, " +
                 "description, reponse_expert, date_envoi, statut) " +
                 "VALUES (?, ?, ?, ?, ?, ?, ?)";
 
@@ -71,11 +71,11 @@ public class DiagnosticService {
 
         // ⚠️ ÉTAPE 3 : Afficher TOUS les id_agriculteur existants
         try (Statement stmt = connection.createStatement();
-             ResultSet rsAll = stmt.executeQuery("SELECT id_diagnostic, id_agriculteur, nom_culture, statut FROM diagnosti")) {
+             ResultSet rsAll = stmt.executeQuery("SELECT id_diagnostic, agriculteur_id, nom_culture, statut FROM diagnosti")) {
             System.out.println("📋 Contenu complet de la table diagnosti :");
             while (rsAll.next()) {
                 System.out.println("   → id_diagnostic=" + rsAll.getInt("id_diagnostic") +
-                        " | id_agriculteur=" + rsAll.getInt("id_agriculteur") +
+                        " | id_agriculteur=" + rsAll.getInt("agriculteur_id") +
                         " | culture=" + rsAll.getString("nom_culture") +
                         " | statut=" + rsAll.getString("statut"));
             }
@@ -84,9 +84,9 @@ public class DiagnosticService {
         }
 
         // ⚠️ ÉTAPE 4 : La vraie requête filtrée
-        String sql = "SELECT id_diagnostic, id_agriculteur, nom_culture, image_path, " +
+        String sql = "SELECT id_diagnostic, agriculteur_id, nom_culture, image_path, " +
                 "description, reponse_expert, statut, date_envoi " +
-                "FROM diagnosti WHERE id_agriculteur = ? ORDER BY date_envoi DESC";
+                "FROM diagnosti WHERE agriculteur_id = ? ORDER BY date_envoi DESC";
 
         System.out.println("🔎 Exécution requête avec id_agriculteur = " + idAgri);
 
@@ -97,7 +97,7 @@ public class DiagnosticService {
             while (rs.next()) {
                 Diagnostic d = new Diagnostic();
                 d.setIdDiagnostic(rs.getInt("id_diagnostic"));
-                d.setIdAgriculteur(rs.getInt("id_agriculteur"));
+                d.setIdAgriculteur(rs.getInt("agriculteur_id"));
                 d.setNomCulture(rs.getString("nom_culture"));
                 d.setImagePath(rs.getString("image_path"));
                 d.setDescription(rs.getString("description"));

@@ -307,6 +307,7 @@ public class ListeCultures {
             case OLIVIER -> "/images/cultures/olivier.jpg";
             case AGRUMES -> "/images/cultures/agrumes.jpg";
             case VIGNE -> "/images/cultures/vigne.jpg";
+            case PASTECQUE -> "/images/cultures/legume.jpg";
             case FRAISE -> "/images/cultures/fraise.jpg";
             case LEGUMES -> "/images/cultures/legume.jpg";
             case AUTRE -> "/images/cultures/autre.jpg";
