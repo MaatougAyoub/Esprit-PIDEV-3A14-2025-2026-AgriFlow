@@ -2,6 +2,7 @@ package controllers;
 
 import entities.Culture;
 import entities.Parcelle;
+import entities.PlanIrrigation;
 import entities.User;
 import javafx.beans.property.SimpleDoubleProperty;
 import javafx.beans.property.SimpleIntegerProperty;
@@ -18,6 +19,7 @@ import javafx.scene.layout.*;
 import services.CulturePDF;
 import services.ServiceCulture;
 import services.ServiceParcelle;
+import services.ServicePlanIrrigation;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.Region;
@@ -73,6 +75,7 @@ public class ListeCultures {
 
     private final ServiceCulture sc = new ServiceCulture();
     private final ServiceParcelle sp = new ServiceParcelle();
+    private final ServicePlanIrrigation servicePlan = new ServicePlanIrrigation();
     private final UserService userService = new UserService();
     private final CulturePDF pdfService = new CulturePDF();
 
@@ -834,6 +837,7 @@ public class ListeCultures {
                     c.setPrixVente(pv);
                     c.setDatePublication(dp);
                     sc.ajouter(c);
+                    creerPlanIrrigationSiAbsent(c);
                     rafraichir();
 
                 } catch (NumberFormatException ex) {
@@ -843,6 +847,24 @@ public class ListeCultures {
                 }
             }
         });
+    }
+
+    private void creerPlanIrrigationSiAbsent(Culture c) {
+        if (c == null || c.getId() <= 0) return;
+        try {
+            int existingPlanId = servicePlan.getLastPlanIdByCulture(c.getId());
+            if (existingPlanId > 0) return;
+
+            PlanIrrigation plan = new PlanIrrigation();
+            plan.setIdCulture(c.getId());
+            plan.setNomCulture(c.getNom());
+            plan.setStatut("en_attente");
+            plan.setVolumeEauPropose((float) c.calculerBesoinEau());
+
+            servicePlan.ajouter(plan);
+        } catch (SQLException e) {
+            showError("Culture ajoutée, mais plan d'irrigation non créé: " + e.getMessage());
+        }
     }
 
     // ============================================================

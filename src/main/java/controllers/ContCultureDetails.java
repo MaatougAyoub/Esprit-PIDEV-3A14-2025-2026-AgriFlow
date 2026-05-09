@@ -98,7 +98,7 @@ public class ContCultureDetails {
             }
 
             // ✅ Mettre à jour le plan principal dans plans_irrigation
-            mettreAJourPlanPrincipal(volumeTotal, "soumis");
+            mettreAJourPlanPrincipal(volumeTotal, "rempli");
 
             reloadFromDbIfPossible();
             showAlert("Succès", "Plan optimisé via IA !\n" +
@@ -141,7 +141,7 @@ public class ContCultureDetails {
             }
 
             // ✅ Mettre à jour le plan principal dans plans_irrigation
-            mettreAJourPlanPrincipal(volumeTotal, "soumis");
+            mettreAJourPlanPrincipal(volumeTotal, "rempli");
 
             showAlert("Succès", "Planning enregistré !\n" +
                     "Volume total : " + String.format("%.1f", volumeTotal) + " mm\n" +

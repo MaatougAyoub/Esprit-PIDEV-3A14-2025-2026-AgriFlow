@@ -6,6 +6,7 @@ import utils.MyDatabase;
 import java.sql.*;
 import java.time.LocalDate;
 import java.util.HashMap;
+import java.util.Locale;
 import java.util.Map;
 
 public class ServicePlanIrrigationJour {
@@ -70,7 +71,11 @@ public class ServicePlanIrrigationJour {
 
             try (ResultSet rs = ps.executeQuery()) {
                 while (rs.next()) {
-                    map.put(rs.getString("jour"), new float[]{
+                    String dayKey = normalizeDayKey(rs.getString("jour"));
+                    if (dayKey == null) {
+                        continue;
+                    }
+                    map.put(dayKey, new float[]{
                             rs.getFloat("eau_mm"),
                             (float) rs.getInt("temps_min"),
                             rs.getFloat("temp_c"),
@@ -81,6 +86,23 @@ public class ServicePlanIrrigationJour {
             }
         }
         return map;
+    }
+
+    private String normalizeDayKey(String day) {
+        if (day == null) {
+            return null;
+        }
+        String upper = day.trim().toUpperCase(Locale.ROOT);
+        return switch (upper) {
+            case "LUN" -> "MON";
+            case "MAR" -> "TUE";
+            case "MER" -> "WED";
+            case "JEU" -> "THU";
+            case "VEN" -> "FRI";
+            case "SAM" -> "SAT";
+            case "DIM" -> "SUN";
+            default -> upper;
+        };
     }
     public void saveDayOptimized(int planId, String jourNom, float eau, int duree, float temp, float humidite, float pluie, LocalDate dateDebutSemaine) throws SQLException {
         String sql = "INSERT INTO plans_irrigation_jour (plan_id, jour, eau_mm, temps_min, temp_c, humidite, pluie, semaine_debut) " +

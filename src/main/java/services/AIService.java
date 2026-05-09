@@ -14,7 +14,7 @@ public class AIService {
 
     String GROQ_KEY = System.getenv("GROQ_API_KEY");
     private static final String API_URL = "https://api.groq.com/openai/v1/chat/completions";
-
+    
 
 
     public String decrireImage(File selectedFile) {

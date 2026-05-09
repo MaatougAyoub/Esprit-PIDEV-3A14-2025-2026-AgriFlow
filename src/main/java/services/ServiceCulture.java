@@ -24,7 +24,7 @@ public class ServiceCulture implements IService<Culture> {
                 "acheteur_id, date_vente, date_publication, prix_vente" +
                 ") VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
-        try (PreparedStatement ps = connection.prepareStatement(req)) {
+        try (PreparedStatement ps = connection.prepareStatement(req, Statement.RETURN_GENERATED_KEYS)) {
 
             ps.setInt(1, c.getParcelleId());
             ps.setInt(2, c.getProprietaireId());
@@ -55,6 +55,12 @@ public class ServiceCulture implements IService<Culture> {
             else ps.setNull(12, Types.DOUBLE);
 
             ps.executeUpdate();
+
+            try (ResultSet rs = ps.getGeneratedKeys()) {
+                if (rs.next()) {
+                    c.setId(rs.getInt(1));
+                }
+            }
         }
     }
 

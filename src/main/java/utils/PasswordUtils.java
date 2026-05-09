@@ -13,6 +13,20 @@ public class PasswordUtils {
     // Verify a plaintext password against a BCrypt hash
     public static boolean verifyPassword(String plainPassword, String hashed) {
         if (plainPassword == null || hashed == null) return false;
-        return BCrypt.checkpw(plainPassword, hashed);
+
+        String normalized = normalizeBcryptHash(hashed);
+        try {
+            return BCrypt.checkpw(plainPassword, normalized);
+        } catch (IllegalArgumentException e) {
+            return false;
+        }
+    }
+
+    private static String normalizeBcryptHash(String hashed) {
+        if (hashed.startsWith("$2y$")) {
+            // PHP bcrypt uses $2y$; jBCrypt expects $2a$.
+            return "$2a$" + hashed.substring(4);
+        }
+        return hashed;
     }
 }
